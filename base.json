@@ -1,0 +1,33 @@
+{
+  "heroes_ch": {
+    "dps": ["半藏", "卡西迪", "回声", "堡垒", "士兵76",
+            "托比昂", "探奇", "死神", "法老之鹰", "源氏",
+            "狂鼠", "猎空", "秩序之光", "索杰恩", "美",
+            "艾什", "黑影", "黑百合"],
+    "tank": ["Dva", "奥丽莎", "拉玛刹", "末日铁拳", "查莉娅",
+             "毛加", "渣客女王", "温斯顿", "破坏球", "莱因哈特",
+             "西格玛", "路霸"],
+    "support": ["伊拉锐", "卢西奥", "天使", "安娜", "巴蒂斯特",
+                "布丽吉塔", "生命之梭", "禅雅塔", "莫伊拉", "雾子",
+                "朱诺"]
+  },
+  "heroes": {
+    "dps": ["Hanzo", "Cassidy", "Echo", "Bastion", "Soldier76",
+            "Torbjorn", "Venture", "Reaper", "Pharah", "Genji",
+            "Junkrat", "Tracer", "Symmetra", "Sojourn", "Mei",
+            "Ashe", "Sombra", "Widowmaker"],
+    "tank": ["Dva", "Orisa", "Ramattra", "Doomfist", "Zarya",
+             "Mauga", "Junkerqueen", "Winston", "Wreckingball", "Reinhardt",
+             "Sigma", "Roadhog"],
+    "support": ["Illari", "Lucio", "Mercy", "Ana", "Baptiste",
+                "Brigitte", "Lifeweaver", "Zenyatta", "Moira", "Kiriko",
+                "Juno"]
+  },
+  "maps": {
+    "CONTROL": ["漓江塔", "尼泊尔", "伊利奥斯", "南极半岛", "绿洲城", "萨摩亚", "釜山"],
+    "HYBRID": ["暴雪世界", "艾兴瓦尔德", "国王大道", "中城", "好莱坞", "努巴尼", "帕拉伊苏"],
+    "PUSH": ["新皇后街", "鲁纳塞彼", "斗兽场", "埃斯佩兰萨"],
+    "CLASH": ["新渣客城", "苏拉瓦萨", "花冈", "阿努比斯王座"],
+    "ESCORT": ["里阿尔托", "直布罗陀", "哈瓦那", "渣客镇", "66号公路", "多拉多", "皇家赛道", "香巴里寺院"]
+  }
+}
