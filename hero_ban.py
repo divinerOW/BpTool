@@ -43,26 +43,22 @@ class HeroBan(QDialog):
         for type in self.model.heroes:
             cnt = 0
             layout_v_button = QVBoxLayout()
-            if type == 'dps':
-                layout_button_heroes = [QHBoxLayout(), QHBoxLayout()]
-                layout_button_heroes[0].setAlignment(Qt.AlignLeft)
-                layout_button_heroes[1].setAlignment(Qt.AlignLeft)
-            else:
-                layout_button_heroes = [QHBoxLayout()]
-                layout_button_heroes[0].setAlignment(Qt.AlignLeft)
+            layout_button_heroes = []
+            for i in range(len(self.model.heroes[type]) // 14 + 1):
+                layout_temp = QHBoxLayout()
+                layout_temp.setAlignment(Qt.AlignLeft)
+                layout_button_heroes.append(layout_temp)
+
             for hero in self.model.heroes[type]:
                 button = QRadioButton()
                 button.setIcon(QIcon(f'resources\\\\heroes\\{hero}.png'))
                 button.setIconSize(QSize(75, 75))
                 button.clicked.connect(self.click_hero_ban)
                 self.buttons_hero[type][hero] = button
-                layout_button_heroes[cnt // 12].addWidget(button)
+                layout_button_heroes[cnt // 14].addWidget(button)
                 cnt += 1
-            if type == 'dps':
-                layout_v_button.addLayout(layout_button_heroes[0])
-                layout_v_button.addLayout(layout_button_heroes[1])
-            else:
-                layout_v_button.addLayout(layout_button_heroes[0])
+            for layout_temp in layout_button_heroes:
+                layout_v_button.addLayout(layout_temp)
             layout_button.addLayout(layout_v_button)
 
         heroes_disable = self.model.select_disabled_ban_heroes(self.team_idx)

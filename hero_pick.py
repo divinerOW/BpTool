@@ -66,7 +66,7 @@ class HeroPick(QDialog):
         layout_player = QHBoxLayout()
         layout_player.setAlignment(Qt.AlignLeft)
         self.combo_player = QComboBox()
-        for player in self.model.players[self.team_idx]:
+        for player in self.model.rosters[self.team_idx]:
             self.combo_player.addItem(player)
         self.combo_player.setFixedSize(200, 30)
 
@@ -132,13 +132,12 @@ class HeroPick(QDialog):
         for type in self.model.heroes:
             cnt = 0
             layout_v_button = QVBoxLayout()
-            if type == 'dps':
-                layout_button_heroes = [QHBoxLayout(), QHBoxLayout()]
-                layout_button_heroes[0].setAlignment(Qt.AlignLeft)
-                layout_button_heroes[1].setAlignment(Qt.AlignLeft)
-            else:
-                layout_button_heroes = [QHBoxLayout()]
-                layout_button_heroes[0].setAlignment(Qt.AlignLeft)
+            layout_button_heroes = []
+            for i in range(len(self.model.heroes[type]) // 14 + 1):
+                layout_temp = QHBoxLayout()
+                layout_temp.setAlignment(Qt.AlignLeft)
+                layout_button_heroes.append(layout_temp)
+
             for hero in self.model.heroes[type]:
                 button = QRadioButton()
                 button.setIcon(QIcon(f'resources\\\\heroes\\{hero}.png'))
@@ -146,13 +145,11 @@ class HeroPick(QDialog):
                 if hero in heroes_disabled:
                     set_button_disabled(button)
                 self.buttons_hero[type][hero] = button
-                layout_button_heroes[cnt // 12].addWidget(button)
+                layout_button_heroes[cnt // 14].addWidget(button)
                 cnt += 1
-            if type == 'dps':
-                layout_v_button.addLayout(layout_button_heroes[0])
-                layout_v_button.addLayout(layout_button_heroes[1])
-            else:
-                layout_v_button.addLayout(layout_button_heroes[0])
+
+            for layout_temp in layout_button_heroes:
+                layout_v_button.addLayout(layout_temp)
             layout_button.addLayout(layout_v_button)
         return layout_button
 

@@ -14,9 +14,11 @@ from global_set import GlobalSet
 from bp import BP
 from hero_ban import HeroBan
 from hero_pick import HeroPick
+from roster import Roster
 from error_msg import ErrorMsg
 from judge import Judge
 from map_pick import MapPick
+from map_check import MapCheck
 from PyQt5.QtCore import QUrl
 from functools import partial
 from utils import set_default_button_size, set_button_disabled
@@ -84,7 +86,7 @@ class BpTool(QWidget):
         self.layout_total_top.addLayout(layout_player)
         self.label_note = QLabel('')
         self.layout_total.addWidget(self.label_note)
-        if len(self.model.map_pool['CONTROL']) == 0:
+        if 'CONTROL' not in self.model.map_pool or len(self.model.map_pool['CONTROL']) == 0:
             self.label_note.setText('找不到地图，请点击【全局设置-地图池】添加地图')
 
         layout_confirm = QHBoxLayout()
@@ -104,6 +106,12 @@ class BpTool(QWidget):
     def forward(self):
         if len(self.labels_map) >= self.model.map_id:
             return
+        # 重设上场名单
+        player_str_1 = ', '.join(self.model.players[0])
+        player_str_2 = ', '.join(self.model.players[1])
+        self.label_player_1.setText(f'{self.model.teams[0]}: {player_str_1}')
+        self.label_player_2.setText(f'{self.model.teams[1]}: {player_str_2}')
+
         layout_map_info = QHBoxLayout()
         label_map = QLabel()
         self.labels_map.append(label_map)
@@ -123,13 +131,17 @@ class BpTool(QWidget):
                     map = self.model.select_map_random('CONTROL')
                 self.model.maps.append(map)
                 label_map_str = f'Map {self.model.map_id}: {map} （系统随机选图）'
-                team_ban = self.model.select_team_ban()
-                label_map_str += f'，{self.model.teams[team_ban]}先ban英雄'
-                self.button_ban_1.setEnabled(True if team_ban == 0 else False)
-                self.button_ban_2.setEnabled(False if team_ban == 0 else True)
+                if self.model.rules['ban']['is_roster']:
+                    label_map_str += '，双方选人'
+                    self.button_roster_1.setEnabled(True)
+                else:
+                    team_ban = self.model.select_team_ban()
+                    label_map_str += f'，{self.model.teams[team_ban]}先ban英雄'
+                    self.button_ban_1.setEnabled(True if team_ban == 0 else False)
+                    self.button_ban_2.setEnabled(False if team_ban == 0 else True)
+                    self.model.log_map_id(ban_first_map_1=team_ban)
+                    self.model.log_map_pick('系统')
                 label_map.setText(label_map_str)
-                self.model.log_map_id(ban_first_map_1=team_ban)
-                self.model.log_map_pick('系统')
             else:
                 idx = self.model.seed_first
                 label_map_str = f'根据种子顺位{self.model.teams[idx]}先选图'
@@ -175,10 +187,16 @@ class BpTool(QWidget):
         self.button_undo.setFixedSize(100, 30)
         self.button_undo.clicked.connect(self.undo)
 
+        self.button_map_check = QPushButton('查看地图池')
+        self.button_map_check.setFixedSize(100, 30)
+        self.button_map_check.clicked.connect(self.map_check)
+        self.button_map_check.setEnabled(False)
+
         self.label_team_prompt = QLabel(f'{self.model.teams[0]} vs {self.model.teams[1]}')
         self.label_team_prompt.setAlignment(Qt.AlignCenter)
         layout_team.addWidget(self.button_global_set)
         layout_team.addWidget(self.button_undo)
+        layout_team.addWidget(self.button_map_check)
         layout_team.addWidget(self.label_team_prompt)
         return layout_team
 
@@ -192,29 +210,33 @@ class BpTool(QWidget):
         self.label_player_2 = QLabel(f'{self.model.teams[1]}: {player_str_2}')
         self.button_choose_map_1 = QPushButton('选图')
         self.button_choose_map_2 = QPushButton('选图')
+        self.button_roster_1 = QPushButton('选人')
+        self.button_roster_2 = QPushButton('选人')
         self.button_ban_1 = QPushButton('ban英雄')
         self.button_ban_2 = QPushButton('ban英雄')
-        self.button_pick_1 = QPushButton('选人')
-        self.button_pick_2 = QPushButton('选人')
+        self.button_pick_1 = QPushButton('选英雄')
+        self.button_pick_2 = QPushButton('选英雄')
         self.button_choose_map_1.clicked.connect(partial(self.map_pick, 0))
         self.button_choose_map_2.clicked.connect(partial(self.map_pick, 1))
+        self.button_roster_1.clicked.connect(partial(self.roster, 0))
+        self.button_roster_2.clicked.connect(partial(self.roster, 1))
         self.button_ban_1.clicked.connect(partial(self.hero_ban, 0))
         self.button_ban_2.clicked.connect(partial(self.hero_ban, 1))
         self.button_pick_1.clicked.connect(partial(self.hero_pick, 0))
         self.button_pick_2.clicked.connect(partial(self.hero_pick, 1))
 
         for button in [self.button_choose_map_1, self.button_choose_map_2, self.button_ban_1, self.button_ban_2,
-                       self.button_pick_1, self.button_pick_2]:
+                       self.button_pick_1, self.button_pick_2, self.button_roster_1, self.button_roster_2]:
             set_button_disabled(button)
 
         for button in [self.button_choose_map_1, self.button_choose_map_2, self.button_ban_1, self.button_ban_2,
-                       self.button_pick_1, self.button_pick_2]:
+                       self.button_pick_1, self.button_pick_2, self.button_roster_1, self.button_roster_2]:
             set_default_button_size(button)
 
-        for widget in [self.label_player_1, self.button_choose_map_1, self.button_ban_1, self.button_pick_1]:
+        for widget in [self.label_player_1, self.button_choose_map_1, self.button_roster_1, self.button_ban_1, self.button_pick_1]:
             layout_player_1.addWidget(widget)
 
-        for widget in [self.label_player_2, self.button_choose_map_2, self.button_ban_2, self.button_pick_2]:
+        for widget in [self.label_player_2, self.button_choose_map_2, self.button_roster_2, self.button_ban_2, self.button_pick_2]:
             layout_player_2.addWidget(widget)
 
         layout_player.addLayout(layout_player_1)
@@ -334,13 +356,17 @@ class BpTool(QWidget):
             window_map_pick.exec_()
             if len(self.model.maps) == self.model.map_id:
                 team_map_pick = self.model.select_map_pick()
-                team_ban = self.model.select_team_ban()
-                self.labels_map[self.model.map_id-1].setText(f'Map {self.model.map_id}: {self.model.maps[self.model.map_id-1]} （{self.model.teams[team_map_pick]}选图），{self.model.teams[team_ban]}先ban英雄')
+                if self.model.rules['ban']['is_roster'] == 1:
+                    self.labels_map[self.model.map_id - 1].setText(f'Map {self.model.map_id}: {self.model.maps[self.model.map_id - 1]} （{self.model.teams[team_map_pick]}选图），双方选人')
+                    self.button_roster_1.setEnabled(True)
+                else:
+                    team_ban = self.model.select_team_ban()
+                    self.labels_map[self.model.map_id - 1].setText(f'Map {self.model.map_id}: {self.model.maps[self.model.map_id - 1]} （{self.model.teams[team_map_pick]}选图），{self.model.teams[team_ban]}先ban英雄')
+                    self.button_ban_1.setEnabled(True if team_ban == 0 else False)
+                    self.button_ban_2.setEnabled(False if team_ban == 0 else True)
+                self.model.log_map_pick(self.model.teams[team_map_pick])
                 self.button_choose_map_1.setEnabled(False)
                 self.button_choose_map_2.setEnabled(False)
-                self.button_ban_1.setEnabled(True if team_ban == 0 else False)
-                self.button_ban_2.setEnabled(False if team_ban == 0 else True)
-                self.model.log_map_pick(self.model.teams[team_map_pick])
         except Exception as e:
             window_err = ErrorMsg(f'选图出错, {str(e)}, 请联系 @抽象派神棍, label_map长度{len(self.labels_map)}, map_id {self.model.map_id}')
             window_err.exec_()
@@ -380,6 +406,43 @@ class BpTool(QWidget):
             window_err = ErrorMsg(f'ban英雄出错, {str(e)}, 请联系 @抽象派神棍')
             window_err.exec_()
 
+    def roster(self, team_idx):
+        try:
+            window_roster = Roster(self.model, team_idx)
+            window_roster.exec_()
+            if team_idx == 0:
+                self.button_roster_1.setEnabled(False)
+                self.button_roster_2.setEnabled(True)
+            else:
+                self.button_roster_2.setEnabled(False)
+                team_ban = self.model.select_team_ban()
+                label_str = self.labels_map[self.model.map_id - 1].text().strip('双方选人') + f'{self.model.teams[team_ban]}先ban英雄'
+                self.labels_map[self.model.map_id - 1].setText(label_str)
+                self.button_choose_map_1.setEnabled(False)
+                self.button_choose_map_2.setEnabled(False)
+                self.button_ban_1.setEnabled(True if team_ban == 0 else False)
+                self.button_ban_2.setEnabled(False if team_ban == 0 else True)
+
+                label_player_1 = self.get_player_label_after_roster(0)
+                label_player_2 = self.get_player_label_after_roster(1)
+                self.label_player_1.setText(label_player_1)
+                self.label_player_2.setText(label_player_2)
+                self.model.log_roster(self.model.teams[0], self.model.rosters[0])
+                self.model.log_roster(self.model.teams[1], self.model.rosters[1])
+        except Exception as e:
+            window_err = ErrorMsg(f'选人出错, {str(e)}, 请联系 @抽象派神棍')
+            window_err.exec_()
+
+    def get_player_label_after_roster(self, index):
+        players_n_roster = set(self.model.players[index]) - set(self.model.rosters[index])
+        label_str = f'{self.model.teams[index]}: '
+        for player in self.model.players[index]:
+            if player in players_n_roster:
+                label_str += f'<font color="grey">{player}</font>, '
+            else:
+                label_str += f'{player}, '
+        return label_str.strip(', ')
+
     def global_set(self):
         try:
             window_global_set = GlobalSet(self.model)
@@ -397,6 +460,7 @@ class BpTool(QWidget):
                 if self.label_note:
                     self.label_note.deleteLater()
                     self.label_note = None
+                self.button_map_check.setEnabled(True)
                 self.forward()
         except Exception as e:
             window_err = ErrorMsg(f'全局设置出错, {str(e)}')
@@ -444,7 +508,7 @@ class BpTool(QWidget):
             self.model.maps.pop()
 
             for button in [self.button_choose_map_1, self.button_choose_map_2, self.button_ban_1, self.button_ban_2,
-                           self.button_pick_1, self.button_pick_2]:
+                           self.button_pick_1, self.button_pick_2, self.button_roster_1, self.button_roster_2]:
                 set_button_disabled(button)
             # ban人
             if len(self.model.bans[0]) == self.model.map_id:
@@ -483,6 +547,10 @@ class BpTool(QWidget):
                 widget.deleteLater()
             else:
                 self.remove_layout(item.layout())
+
+    def map_check(self):
+        self.window_map_check = MapCheck(self.model)
+        self.window_map_check.show()
 
 
 if __name__ == '__main__':

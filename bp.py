@@ -28,12 +28,9 @@ class BP:
         self.config = self.load_config()
         self.heroes = self.config['heroes_ch']
         self.map_all = self.config['maps']
-        self.map_pool = {'CONTROL': [],
-                         'HYBRID': [],
-                         'PUSH': [],
-                         'CLASH': [],
-                         'ESCORT': []}
+        self.map_pool = {type: [] for type in self.map_all}
         self.players = [team_a_players, team_b_players]
+        self.rosters = [team_a_players, team_b_players]
         self.bans = [[], []]
         self.picks = [[], []]
         self.map_picks = [[], []]
@@ -166,6 +163,12 @@ class BP:
         for player in hero_dict:
             if hero_dict[player] in self.heroes['support']:
                 log += f'{player}-{hero_dict[player]}, '
+        self.log.append(log.strip(', '))
+
+    def log_roster(self, team, players):
+        log = f'{team} roster: '
+        for player in players:
+            log += f'{player}, '
         self.log.append(log.strip(', '))
 
     def log_winner(self):

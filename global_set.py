@@ -31,11 +31,7 @@ class GlobalSet(QDialog):
     def __init__(self, model):
         super().__init__()
         self.model = model
-        self.map_pool_temp = {'CONTROL': [],
-                              'HYBRID': [],
-                              'PUSH': [],
-                              'CLASH': [],
-                              'ESCORT': []}
+        self.map_pool_temp = {}
         self.radio_button_map = {}
         self.edit_line_map = {}
         self.initUI()
@@ -135,7 +131,7 @@ class GlobalSet(QDialog):
         layout_map_order = QHBoxLayout()
         layout_map_order.setAlignment(Qt.AlignLeft)
         self.list_widget = QListWidget()
-        self.list_widget.addItems(['控制图', '混合图', '大白图', '闪点/交锋图', '推车图'])
+        self.list_widget.addItems([MAP_TYPE_CH[type] for type in self.model.map_all.keys()])
         self.list_widget.setFixedSize(200, 120)
         self.list_widget.setEnabled(False)
         layout_map_button = QVBoxLayout()
@@ -150,19 +146,28 @@ class GlobalSet(QDialog):
         layout_map_order.addWidget(self.list_widget)
         layout_map_order.addLayout(layout_map_button)
 
-        layout_map_1_pick = self.add_rule_layout('Map1选图方式', ['系统随机', '种子顺位选图'], name='map_1_pick', default=0)
-        layout_map_n_pick = self.add_rule_layout('后续地图选图方式', ['胜者选图', '败者选图'], name='map_n_pick', default=1)
+        layout_map_1_pick = self.add_rule_layout('Map1选图方式', ['系统随机', '种子顺位选图'], name='map_1_pick',
+                                                 default=0)
+        layout_map_n_pick = self.add_rule_layout('后续地图选图方式', ['胜者选图', '败者选图'], name='map_n_pick',
+                                                 default=1)
 
         line_2 = QFrame()
         line_2.setFrameShape(QFrame.HLine)
         line_2.setFrameShadow(QFrame.Sunken)
 
         label_3 = QLabel('ban英雄')
-        layout_map_1_ban = self.add_rule_layout('Map1 ban英雄方式', ['系统随机', '种子顺位优先'], name='map_1_ban', default=1)
-        layout_map_n_ban = self.add_rule_layout('后续地图ban英雄方式', ['胜者先ban', '败者先ban'], name='map_n_ban', default=1)
-        layout_team_hero = self.add_rule_layout('同一队伍在两张地图中ban相同英雄', ['允许', '不允许'], name='team_hero', default=1)
-        layout_map_hero = self.add_rule_layout('同一张图双方ban相同类型的英雄', ['允许', '不允许'], name='map_hero', default=1)
-        layout_match_hero = self.add_rule_layout('不同地图中ban对方ban过的英雄', ['允许', '不允许'], name='match_hero', default=0)
+        layout_map_1_ban = self.add_rule_layout('Map1 ban英雄方式', ['系统随机', '种子顺位优先'], name='map_1_ban',
+                                                default=1)
+        layout_map_n_ban = self.add_rule_layout('后续地图ban英雄方式', ['胜者先ban', '败者先ban'], name='map_n_ban',
+                                                default=1)
+        layout_is_roster = self.add_rule_layout('选人和ban英雄顺序', ['先选人', '先ban英雄'], name='is_roster',
+                                                default=0)
+        layout_team_hero = self.add_rule_layout('同一队伍在两张地图中ban相同英雄', ['允许', '不允许'], name='team_hero',
+                                                default=1)
+        layout_map_hero = self.add_rule_layout('同一张图双方ban相同类型的英雄', ['允许', '不允许'], name='map_hero',
+                                               default=1)
+        layout_match_hero = self.add_rule_layout('不同地图中ban对方ban过的英雄', ['允许', '不允许'], name='match_hero',
+                                                 default=0)
 
         line_3 = QFrame()
         line_3.setFrameShape(QFrame.HLine)
@@ -186,6 +191,7 @@ class GlobalSet(QDialog):
         layout.addWidget(label_3)
         layout.addLayout(layout_map_1_ban)
         layout.addLayout(layout_map_n_ban)
+        layout.addLayout(layout_is_roster)
         layout.addLayout(layout_team_hero)
         layout.addLayout(layout_map_hero)
         layout.addLayout(layout_match_hero)
@@ -261,21 +267,12 @@ class GlobalSet(QDialog):
         layout_map = QVBoxLayout()
         self.combo_box_dict = {}
         self.label_content_dict = {}
-        layout_map_control = self.init_map_type('控制图', 'CONTROL',
-                                                self.model.map_all['CONTROL'])
-        layout_map_hybrid = self.init_map_type('混合图', 'HYBRID',
-                                               self.model.map_all['HYBRID'])
-        layout_map_push = self.init_map_type('推大白图', 'PUSH',
-                                             self.model.map_all['PUSH'])
-        layout_map_clash = self.init_map_type('闪点/交锋图', 'CLASH',
-                                              self.model.map_all['CLASH'])
-        layout_map_escort = self.init_map_type('推车图', 'ESCORT',
-                                               self.model.map_all['ESCORT'])
-        layout_map.addLayout(layout_map_control)
-        layout_map.addLayout(layout_map_hybrid)
-        layout_map.addLayout(layout_map_push)
-        layout_map.addLayout(layout_map_clash)
-        layout_map.addLayout(layout_map_escort)
+        self.map_pool_temp = {type: [] for type in self.model.map_all}
+        for type in self.model.map_all:
+            layout_map_type = self.init_map_type(MAP_TYPE_CH[type], type,
+                                                 self.model.map_all[type])
+            layout_map.addLayout(layout_map_type)
+
         return layout_map
 
     def init_map_type(self, map_type_name, map_type, map_list):
@@ -384,7 +381,8 @@ class GlobalSet(QDialog):
             hero_num = int(self.edit_line_map['hero_num'].text()) if self.edit_line_map['hero_num'].text() != '' else 5
             dps_num = int(self.edit_line_map['dps_num'].text()) if self.edit_line_map['dps_num'].text() != '' else 2
             tank_num = int(self.edit_line_map['tank_num'].text()) if self.edit_line_map['tank_num'].text() != '' else 1
-            support_num = int(self.edit_line_map['support_num'].text()) if self.edit_line_map['support_num'].text() != '' else 2
+            support_num = int(self.edit_line_map['support_num'].text()) if self.edit_line_map[
+                                                                               'support_num'].text() != '' else 2
             assert hero_num <= dps_num + tank_num + support_num, '英雄数量有误, 请检查'
 
             self.model.rules['pick'] = {'hero_num': hero_num,
@@ -393,17 +391,20 @@ class GlobalSet(QDialog):
                                         'support_num': support_num
                                         }
             map_order = [MAP_TYPE_MAP[self.list_widget.item(i).text()] for i in range(self.list_widget.count())]
-            self.model.rules['map'] = {'is_order_fix': True if self.radio_button_map['map_type'].buttons()[0].isChecked() else False,
-                                       'map_order': map_order if self.radio_button_map['map_type'].buttons()[0].isChecked() else None,
-                                       'is_map_1_random': True if self.radio_button_map['map_1_pick'].buttons()[0].isChecked() else False,
-                                       'is_winner_pick': True if self.radio_button_map['map_n_pick'].buttons()[0].isChecked() else False
-                                       }
-            self.model.rules['ban'] = {'is_map_1_random': True if self.radio_button_map['map_1_ban'].buttons()[0].isChecked() else False,
-                                       'is_winner_ban': True if self.radio_button_map['map_n_ban'].buttons()[0].isChecked() else False,
-                                       'allow_team_hero': True if self.radio_button_map['team_hero'].buttons()[0].isChecked() else False,
-                                       'allow_map_hero': True if self.radio_button_map['map_hero'].buttons()[0].isChecked() else False,
-                                       'allow_match_hero': True if self.radio_button_map['match_hero'].buttons()[0].isChecked() else True
-                                       }
+            self.model.rules['map'] = {
+                'is_order_fix': True if self.radio_button_map['map_type'].buttons()[0].isChecked() else False,
+                'map_order': map_order if self.radio_button_map['map_type'].buttons()[0].isChecked() else None,
+                'is_map_1_random': True if self.radio_button_map['map_1_pick'].buttons()[0].isChecked() else False,
+                'is_winner_pick': True if self.radio_button_map['map_n_pick'].buttons()[0].isChecked() else False
+                }
+            self.model.rules['ban'] = {
+                'is_map_1_random': True if self.radio_button_map['map_1_ban'].buttons()[0].isChecked() else False,
+                'is_winner_ban': True if self.radio_button_map['map_n_ban'].buttons()[0].isChecked() else False,
+                'is_roster': True if self.radio_button_map['is_roster'].buttons()[0].isChecked() else False,
+                'allow_team_hero': True if self.radio_button_map['team_hero'].buttons()[0].isChecked() else False,
+                'allow_map_hero': True if self.radio_button_map['map_hero'].buttons()[0].isChecked() else False,
+                'allow_match_hero': True if self.radio_button_map['match_hero'].buttons()[0].isChecked() else True
+                }
             self.model.save_config(config_path='config_temp.json')
             self.model.is_configured = 1
             self.close()
@@ -508,6 +509,11 @@ class GlobalSet(QDialog):
         else:
             self.radio_button_map['map_n_ban'].buttons()[1].setChecked(True)
 
+        if config['rule']['ban']['is_roster']:
+            self.radio_button_map['is_roster'].buttons()[0].setChecked(True)
+        else:
+            self.radio_button_map['is_roster'].buttons()[1].setChecked(True)
+
         if config['rule']['ban']['allow_team_hero']:
             self.radio_button_map['team_hero'].buttons()[0].setChecked(True)
         else:
@@ -543,4 +549,3 @@ class GlobalSet(QDialog):
         except Exception as e:
             window_err = ErrorMsg(f'加载配置出错{str(e)}，请检查配置文件')
             window_err.exec_()
-
